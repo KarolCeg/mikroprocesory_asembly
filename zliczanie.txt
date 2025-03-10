@@ -1,0 +1,33 @@
+#include "msp430.h"			; dolaczenie biblioteki do MSP430
+;------------------------------------------------------------------------------
+; Rotacja "1" na porcie P2, w lewo
+;------------------------------------------------------------------------------
+	ORG	01100h			; poczatkowy adres pamieci programu
+
+INIT:	mov.w	#0A00h,SP		; inicjalizacja wsk. stosu
+	mov.w	#WDTPW+WDTHOLD,&WDTCTL	; wylaczenie watchdoga
+ 
+        bis.b	#0FFh,&P2DIR   		;move
+        bis.b	#00h,&P2OUT		;chyba move
+	bic.b	#01h, &P1DIR
+	bis	#0001h, R15
+
+       
+        
+main:	bit.b	#01h, &P1IN
+	jnz	ZMIANA 
+
+	bit.b	#01h, R15
+	jz	ZMIANA
+
+	inc.b	&P2OUT
+ZMIANA:	mov.b	&P1IN, R15
+	jmp	main
+;------------------------------------------------------------------------------
+;       Wektory przerwan
+;------------------------------------------------------------------------------
+	ORG	0FFFEh			; wektor resetu
+	DW	INIT			; adres poczatkowy pamieci programu
+   
+
+	END
