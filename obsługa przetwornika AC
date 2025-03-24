@@ -1,0 +1,82 @@
+#include "msp430.h"                     ; #define controlled include file
+        NAME    main                    ; module name
+        PUBLIC  main                    ; make the main label vissible
+                                        ; outside this module
+
+
+        ORG 0FFEEh
+        DC16 ADC12_Interrupt
+        
+        ORG     0FFFEh
+        DC16    init                    ; set reset vector to 'init' label
+
+        RSEG    CSTACK                  ; pre-declaration of segment
+        RSEG    CODE                    ; place program in 'CODE' segment
+
+init:   MOV     #SFE(CSTACK), SP        ; set up stack
+        bis.b   #0FFh, &P2DIR
+
+
+
+main:   NOP                             ; main program
+        MOV.W   #WDTPW+WDTHOLD,&WDTCTL  ; Stop watchdog timer
+       
+        mov.b #0d, P2OUT
+
+
+ADC_Setup:
+        bis.b   #BIT1,&P6SEL            ; Enable A/D channel A1
+        mov     #SHT0_8+MSC+ADC12ON,&ADC12CTL0
+        mov     #SHP+CONSEQ_2,&ADC12CTL1
+        mov.b   #INCH_1,ADC12MCTL0      ; A1 goes to MEM0
+        mov     #BIT0,&ADC12IE          ; Enable ADC12IFG.1 for ADC12MEM0
+
+        bis.w   #REFON, ADC12CTL0
+        bis.w   #REF2_5V, ADC12CTL0
+        bis.b   #SREF0, ADC12MCTL0
+        
+        
+        bis     #ENC,&ADC12CTL0         ; Enable conversions
+        bis     #ADC12SC,&ADC12CTL0     ; Start conversions
+        bis     #GIE,SR                 ; Enable interrupts
+       
+        JMP $                           ; jump to current location '$'
+         
+         ; (endless loop)
+dziel16:
+            mov.w       R14, R15
+            mov.w       R12, R13
+            clr.w       R14
+            mov.w       #0x1, R12
+skok:
+            rla.w       R13
+            rlc.w       R14
+            cmp.w       R15, R14
+            jnc         pom
+            sub.w       R15, R14
+pom:        rlc.w       R12
+            jnc         skok
+            ret
+
+loop: jmp loop
+
+ADC12_Interrupt:
+        mov.w ADC12MEM0, R12
+        mov.w #80d, R14
+        call #dziel16
+        mov.w #10d, R14
+        call #dziel16
+        
+        rla.b R12
+        rla.b R12
+        rla.b R12
+        rla.b R12
+        
+        mov.b R12, P2OUT
+
+        reti
+
+
+
+                                    ;
+        END
