@@ -1,0 +1,102 @@
+#include "msp430.h"                     ; #define controlled include file
+
+        NAME    main                    ; module name
+
+        PUBLIC  main                    ; make the main label vissible
+                                        ; outside this module
+
+        ORG     0FFFEh
+        DC16    init                    ; set reset vector to 'init' label
+
+        ORG     0FFE8h
+        DC16    OBS
+
+        RSEG    CSTACK                  ; pre-declaration of segment
+        RSEG    CODE                    ; place program in 'CODE' segment
+
+
+
+init:   MOV     #SFE(CSTACK), SP        ; set up stack
+        MOV.W   #WDTPW+WDTHOLD,&WDTCTL  ; Stop watchdog timer
+        bis.b   #0FFh, &P2DIR
+        bis.w   #GIE, SR
+        bis.b   #02h, P1IE
+
+main:   NOP                             ; main program
+        mov.w #72, R10
+        mov.b #10d, P2OUT
+        mov.b #10, R14
+        
+SetupP4:     
+        bis.b   #BIT4 | BIT5, &P4SEL     ; P4.4, P4.5 option select
+        bis.b   #BIT4 | BIT5, &P4DIR     ; P4.4, P4.5 outputs
+SetupC0:     
+        mov.w   #720,&TBCCR0          ; PWM Period
+        mov.w   #OUTMOD_7,&TBCCTL4      ; CCR4 reset/set
+        mov.w   #72 ,&TBCCR4            ; CCR4 25% PWM duty cycle on P4.4
+SetupTB:     
+        mov.w   #TBSSEL_2+MC_1,&TBCTL   ; SMCLK, upmode
+
+Loop:                                            											
+        jmp Loop
+        
+
+
+OBS:
+        bit.b #04h, P1IN
+        jz OBS_l
+        jnz OBS_p
+
+OBS_p:  
+        add.w #36,R10
+        dadd.b #5, P2OUT
+        cmp.w #684, R10
+        jnz SetupC4
+        
+        mov.w #648, R10
+        mov.b #90, P2OUT
+        jmp SetupC4
+
+
+OBS_l:
+        sub.w #36,R10
+        mov.b P2OUT, R12
+        call  #dziel8
+        cmp #0, R14
+        
+        sub.b #5d, P2OUT
+        sub.b #0110b, P2OUT
+        
+        cmp.w #36,R10
+        jnz SetupC4
+        
+        mov.w #72, R10
+        mov.b #10, P2OUT
+        jmp SetupC4
+        
+	
+SetupC4:     
+        mov.w   #OUTMOD_7,&TBCCTL4      ; CCR4 reset/set
+        mov.w   R10 ,&TBCCR4            ; CCR4 25% PWM duty cycle on P4.4	
+        mov.b #0, P1IFG
+        reti
+       
+            ;procedura dzielenia R12/R14
+            ;argumenty wejsciowe w R12 i R14
+            ; wynik w R12, reszta z dzielenia w R14
+dziel8:
+            and.b      #0xFF, R12
+            and.b       #0xFF, R14
+skok:
+            rla.w       R13
+            rlc.w       R14
+            cmp.w       R15, R14
+            jnc         pom
+            sub.w       R15, R14
+pom:        rlc.w       R12
+            jnc         skok
+            ret        
+
+
+
+        END
