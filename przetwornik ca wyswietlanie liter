@@ -1,0 +1,73 @@
+#include "msp430.h"                     ; #define controlled include file
+
+        NAME    main                    ; module name
+
+        PUBLIC  main                    ; make the main label vissible
+                                        ; outside this module
+        ORG     0FFECh
+        DC16    TIMER_A0_Interrupt
+        ORG     0FFFEh
+        DC16    init                    ; set reset vector to 'init' label
+
+        RSEG    CSTACK                  ; pre-declaration of segment
+        RSEG    CODE                    ; place program in 'CODE' segment
+
+
+waveform:        
+    DW  128,132, 136, 143, 151, 159, 167, 174, 182, 189, 196, 202, 209, 215, 220, 226, 231, 235, 239, 243, 246, 249, 251, 253, 254, 255, 254, 253, 251, 249, 246, 243, 239, 235, 231, 226, 220, 215, 209, 202, 196, 189, 182, 174, 167, 159, 151, 143, 136,132, 128, 119, 112, 104, 96, 88, 81, 73, 66, 59, 53, 46, 40, 35, 29, 24, 20, 16, 12, 9, 6, 4, 2, 1, 0, 1, 2, 4, 6, 9, 12, 16, 20, 24, 29, 35, 40, 46, 53, 59, 66, 73, 81, 88, 96, 104, 112, 119, 124,127
+
+waveformII:
+    DW  254, 253, 251, 249, 246, 243, 239, 235, 231, 226, 220, 215, 209, 202, 196, 189, 182, 174, 167, 159, 151, 143, 136, 132, 128, 119, 112, 104, 96, 88, 81, 73, 66, 59, 53, 46, 40, 35, 29, 24, 20, 16, 12, 9, 6, 4, 2, 1, 0,  1, 2, 4, 6, 9, 12, 16, 20, 24, 29, 35, 40, 46, 53, 59, 66, 73, 81, 88, 96, 104, 112, 119,124,127,128,132, 136, 143, 151, 159, 167, 174, 182, 189, 196, 202, 209, 215, 220, 226, 231, 235, 239, 243, 246, 249, 251, 253, 254, 255
+
+init:   MOV     #SFE(CSTACK), SP        ; set up stack
+        bis.b   #10h, &P1DIR
+        bis.b   #80h, &P5DIR
+        
+        bic.b   #10h, &P1OUT
+        bic.b   #80h, &P5OUT
+        
+        bis.b   #0FFh, &P2DIR
+        bic.b   #0FFh, &P2OUT
+        
+
+main:   NOP                             ; main program
+        MOV.W   #WDTPW+WDTHOLD,&WDTCTL  ; Stop watchdog timer
+
+SetupADC12:  
+        mov.w   #REF2_5V+REFON,&ADC12CTL0 ; Internal 2.5V ref on
+
+SetupDAC120: 
+        mov.w   #DAC12IR+DAC12AMP_5+DAC12ENC,&DAC12_1CTL  ; Int ref gain 1
+        mov.w   #0h,&DAC12_1DAT  
+        
+SetupTimerA0                                            ;
+        mov.w   #0x10,&TACCR0            ; Period for up mode
+        mov.w   #CCIE,&TACCTL0           ; Enable interrupts on Compare 0
+        mov.w   #MC_1|ID_3|TASSEL_2|TACLR,&TACTL
+        bis.w   #GIE,SR                   ; Enable interrupts (just TACCR0)
+
+Mainloop:
+        nop                             ; Required only for debugger
+        MOV #0,R4
+        JMP $                           ; jump to current location '$'                                       
+                                        ; (endless loop)
+
+TIMER_A0_Interrupt:
+        inc R4                          ; i++
+        CMP #200,R4                     ; i < 200
+        JNZ output                      
+        MOV #0,R4                       ; i=0
+
+output:
+        MOV  #waveform, R5              ; R5 = &waveform
+        ADD  R4,R5                      ; R5 = waveform + i
+        MOV  @R5,&DAC12_1DAT            ; DAC = waveform[i]
+
+        MOV  #waveformII, R6             ; R5 = &waveform
+        ADD   R4,R6                      ; R5 = waveform + i
+        MOV   @R6,R7                      ; DAC = waveform[i]
+        mov.b R7,P2OUT
+
+        RETI
+
+        END
