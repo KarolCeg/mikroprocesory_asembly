@@ -1,0 +1,55 @@
+#include "msp430.h"			; dolaczenie biblioteki do MSP430
+;------------------------------------------------------------------------------
+; Rotacja "1" na porcie P2, w lewo
+;------------------------------------------------------------------------------
+	ORG	01100h			; poczatkowy adres pamieci programu
+
+INIT:	mov.w	#0A00h,SP		; inicjalizacja wsk. stosu
+	mov.w	#WDTPW+WDTHOLD,&WDTCTL	; wylaczenie watchdoga
+	bis.b	#0FFh,&P2DIR		; P2.0-P2.7 jako wyjscie
+        bis.b	#08h,P1IE
+        bis.b	#08h,P1IES
+        bis.w   #GIE, SR
+        mov.w   #TASSEL1|ID1|ID0|MC0|MC1, TACTL
+        mov.w   #0C350h, TACCR0
+        mov.b   #00h, P2OUT
+//main:	push	SR			; SR -> stos
+	//mov.b	#0FFh,P2OUT		; inicjalizacja P1OUT
+loop:   jmp loop
+ZEGAR:
+        DADD.b  #1, P2OUT
+        bic.w   #01h, TACTL
+        RETI
+PORT_P: 
+        bic.b   #08h, P1IFG
+        bit.b   #01h, P4IN
+        jz     startstop
+        bit.b   #02h, P4IN
+        jz      reset
+        RETI
+startstop:
+        bit.w   #TAIFG, TACTL
+        jnz     start
+        jz      stop
+        RETI
+start:
+        bis.w   #TAIE, TACTL
+        bic.w   #TAIFG, TACTL
+        RETI
+stop:
+        bic.w   #TAIE, TACTL
+        bic.w   #TAIFG, TACTL
+        RETI
+reset:
+        mov.b   #00h, P2OUT
+        RETI
+;------------------------------------------------------------------------------
+;       Wektory przerwan
+;------------------------------------------------------------------------------
+	ORG	0FFFEh			; wektor resetu
+	DW	INIT			; adres poczatkowy pamieci programu
+        ORG     0FFE8h
+        DW      PORT_P
+        ORG     0FFEAh
+        DW      ZEGAR
+	END
