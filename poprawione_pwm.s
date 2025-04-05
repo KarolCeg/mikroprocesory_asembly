@@ -1,22 +1,26 @@
 #include "msp430.h"			; dolaczenie biblioteki do MSP430
 ;------------------------------------------------------------------------------
-; Rotacja "1" na porcie P2, w lewo
+; regulacja PWM
 ;------------------------------------------------------------------------------
 	ORG	01100h			; poczatkowy adres pamieci programu
 INIT:	mov.w	#0A00h,SP		; inicjalizacja wsk. stosu
 	mov.w	#WDTPW+WDTHOLD,&WDTCTL	; wylaczenie watchdoga
 
+	
+        bis.w   #GIE, SR
+        mov.w   #TBSSEL1, TBCTL
+	mov.w  ID1, TBCTL
+  	mov.w   MC0, TBCTL
+    	mov.w   MC1, TBCTL
+        mov.w   #OUTMOD1, TBCCTL4
+        mov.w   #0032h, TBCCR0
+        mov.w   #0005h, TBCCR4
+        mov.b   #00h, P2OUT
 	bis.b	#0FFh,&P2DIR		; P2.0-P2.7 jako wyjscie
         bis.b	#010h,&P4DIR
         bis.b	#010h,&P4SEL
         mov.b	#03h,P1IE
         mov.b	#03h,P1IES
-        bis.w   #GIE, SR
-        mov.w   #TBSSEL1|ID1|MC0|MC1, TBCTL
-        mov.w   #OUTMOD1, TBCCTL4
-        mov.w   #0032h, TBCCR0
-        mov.w   #0005h, TBCCR4
-        mov.b   #00h, P2OUT
 //main:	push	SR			; SR -> stos
 	//mov.b	#0FFh,P2OUT		; inicjalizacja P1OUT
 loop:   jmp loop//git
