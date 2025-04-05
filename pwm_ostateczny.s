@@ -19,14 +19,13 @@ INIT:	mov.w	#0A00h,SP		; inicjalizacja wsk. stosu
         bis.b	#010h,&P4SEL
         mov.b	#03h,P1IE
         mov.b	#03h,P1IES
-//main:	push	SR			; SR -> stos
-	//mov.b	#0FFh,P2OUT		; inicjalizacja P1OUT
-loop:   jmp loop//git
+loop:   
+	jmp loop
 PORT_P: 
         bic.b   #03h, P1IFG
         xor.b   #02h, P1IES
-        bit.b   #01h, P1IN
-        jz      resetdziewiec
+       // bit.b   #01h, P1IN
+        //jz      resetdziewiec
         bit.b   #02h, P1IES
         jz      narastajace
         jnz     opadajace
@@ -40,25 +39,25 @@ opadajace:
         jnz     zwiekszenie
         jz      zmniejszenie
 zwiekszenie:
-        cmp.b   #0FFh, P2OUT
-        jz      resetzero
+        //cmp.b   #0FFh, P2OUT
+        //jz      resetzero
         add.w   #0005h, TBCCR4
-        setc
-        rrc.b   P2OUT
+       // setc
+       // rrc.b   P2OUT
         RETI
 zmniejszenie:
-        cmp.b   #00h, P2OUT
-        jz      resetdziewiec
+       // cmp.b   #00h, P2OUT
+       // jz      resetdziewiec
         sub.w   #0005h, TBCCR4
-        clrc
-        rlc.b   P2OUT
-        RETI
-resetzero:
-       mov.b    #0FFh, P2OUT
-       RETI
-resetdziewiec:
-       mov.b    #00h, P2OUT
-       RETI
+       // clrc
+        //rlc.b   P2OUT
+        //RETI
+//resetzero:
+     //  mov.b    #0FFh, P2OUT
+      // RETI
+//resetdziewiec:
+     //  mov.b    #00h, P2OUT
+      // RETI
 //delay: MOV #0FFFFh, R8
 //OP: dec R8
 //    jnz OP
