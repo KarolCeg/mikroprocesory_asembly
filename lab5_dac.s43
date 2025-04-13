@@ -1,0 +1,120 @@
+#include "msp430.h"                     ; #define controlled include file
+;przelaczanie trybow P4.0
+;DAC_1 wyj P6.7 oscyloskop TP5 GND -> TP8
+;Trzeba wlaczyc generator ref z ADC -> REF2_5V i REFON
+;wartosci do DAC_1DAT
+        NAME    main                    ; module name
+
+        PUBLIC  main                    ; make the main label vissible
+                                        ; outside this module
+        ORG     0FFFEh
+        DC16    init                    ; set reset vector to 'init' label
+
+        ORG     0FFECh			; poczatkowy adres pamieci programu
+        DC16    TIMER_A1_Interrupt
+        
+        ORG     0FFE8h
+        DC16    Butt_Interrupt
+
+        RSEG    CSTACK                  ; pre-declaration of segment
+        RSEG    CODE                    ; place program in 'CODE' segment
+
+init:   MOV     #SFE(CSTACK), SP        ; set up stack
+        mov.w   #0h, R15                ; mode register
+        mov.w   #0h, R14                ; sample register
+        
+        ;Wlaczenie napiecia referyncyjnego
+        mov.w   #REFON + REF2_5V, &ADC12CTL0
+        
+        bis.w   #GIE,SR                 ; przerwania wlaczone
+        ;Zegar
+        mov.w   #39,&TACCR0           ; Period for up mode
+        ; T  = 1560 samples
+        mov.w   #CCIE,&TACCTL0            ; Enable interrupts on Compare 0
+
+        BIS.w   #MC0| ID_0|TASSEL_2|TACLR,&TACTL
+        mov.w   #OUTMOD_2,& TACCTL1 
+        ;PINY 1/2
+        bis.b   #00001000b, P1IE
+        bis.b   #00001000b, P1IES
+        mov.b	#0FFh,P2DIR		; inicjalizacja P1OUT
+        mov.b   #00h, P2OUT
+        ;PIN6.7
+        bis.b   #10000000b, P6SEL
+        bis.b   #10000000b, P6DIR
+        
+        ;DAC12_1
+        mov.w   #DAC12IR + DAC12AMP_5 + DAC12ENC, &DAC12_1CTL
+        mov.w   #0FFFh, &DAC12_1DAT
+        
+        MOV.W   #WDTPW+WDTHOLD,&WDTCTL  ; Stop watchdog timer
+
+main:   
+        
+        JMP main                           ; jump to current location '$'
+
+sin_wave: 
+        DW 0x800,0x940,0xa78,0xba1,0xcb3,0xda7,0xe78,0xf20,0xf9b,0xfe6,0xfff,0xfe6,0xf9b,0xf20,0xe78,0xda7,0xcb3,0xba1,0xa78,0x940,0x800,0x6bf,0x587,0x45e,0x34c,0x258,0x187,0xdf,0x64,0x19,0x0,0x19,0x64,0xdf,0x187,0x258,0x34c,0x45e,0x587,0x6bf
+triangle_wave:
+        DW 0xcd,0x19a,0x266,0x333,0x400,0x4cd,0x599,0x666,0x733,0x800,0x8cc,0x999,0xa66,0xb33,0xbff,0xccc,0xd99,0xe66,0xf32,0xfff,0xf32,0xe66,0xd99,0xccc,0xbff,0xb33,0xa66,0x999,0x8cc,0x800,0x733,0x666,0x599,0x4cd,0x400,0x333,0x266,0x19a,0xcd,0x0
+TIMER_A1_Interrupt:
+        cmp.w   #0h, R15
+        jnz     pick_mode   
+        cmp     #20, R14
+        jz      reverse_square
+        jmp     increment_r14
+
+reverse_square:
+        xor.w   #0FFFh, &DAC12_1DAT
+        mov.w   #0h, R14
+        RETI
+
+pick_mode:
+        cmp.w   #1h, R15
+        jz      sine
+        mov.w       #triangle_wave, R13
+        jmp         read_table
+
+sine:
+        mov.w       #sin_wave, R13
+        jmp read_table
+        
+read_table:
+        cmp.w       #80, R14
+        jz          reset_samples
+        add.w       R14, R13
+        mov.w       @R13, &DAC12_1DAT
+        jmp         add2_r14
+    
+increment_r14:
+        inc.w   R14
+        RETI
+
+add2_r14:
+        add.w   #2, R14
+        RETI
+        
+reset_samples:
+        mov.w       #0h, R14
+        add.w       R14, R13
+        mov.w       @R13, &DAC12_1DAT
+        jmp         add2_r14
+
+Butt_Interrupt:
+        bic.b   #08h, P1IFG
+        mov.w   #0h,  R14
+        inc.w   R15
+        cmp     #03h, R15
+        jz      reset_mode
+        mov.b   R15, P2OUT
+        RETI
+
+reset_mode:
+        mov.w   #0h, R15
+        mov.w   #0FFFh, &DAC12_1DAT
+        mov.b   R15, P2OUT
+        RETI
+        
+        END
+
+  
