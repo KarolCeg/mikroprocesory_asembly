@@ -226,7 +226,7 @@ reset:
 ------------------------------       
 conversion
         mov.w   R10, R9
-        and    #0f000h, R9 
+        and    #0f000h, R9  ;Sprawdzenie czy wartość przekracza 12 bitów 
         cmp    #0h, R9
         jnz     greater
         inc     R8
