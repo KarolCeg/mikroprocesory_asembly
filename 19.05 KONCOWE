@@ -242,7 +242,10 @@ reset:
     mov.b       #02Fh,R8
     mov.b #00h,P1IFG
     RETI        
-;------------------------------       
+;------------------------------    
+   ;procedura dzielenia R12/R14
+            ;argumenty wejsciowe w R12 i R14
+            ; wynik w R12, reszta z dzielenia w R14
 dziel8:
             and.b      #0xFF, R12
             and.b       #0xFF, R14
