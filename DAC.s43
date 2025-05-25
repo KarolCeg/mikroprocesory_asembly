@@ -1,0 +1,67 @@
+#include "msp430.h"			; dolaczenie biblioteki do MSP430
+;------------------------------------------------------------------------------
+; Rotacja "1" na porcie P2, w lewo
+;------------------------------------------------------------------------------
+	ORG	01100h			; poczatkowy adres pamieci programu
+
+INIT:	mov.w	#0A00h,SP		; inicjalizacja wsk. stosu
+	mov.w	#WDTPW+WDTHOLD,&WDTCTL	; wylaczenie watchdoga
+	bis.b	#0FFh,&P2DIR		; P2.0-P2.7 jako wyjscie
+        bis.b	#08h,P1IE
+        bis.b	#08h,P1IES
+        bis.w   #GIE, SR
+        mov.w   #TASSEL1|ID1|ID0|MC0|MC1|TAIE, TACTL
+        mov.w   #064h, TACCR0
+        mov.b   #00h, P2OUT
+        bis.b   #02h, P6SEL
+        bis.w   #MSC|REF2_5V|REFON, ADC12CTL0
+        bis.w   #SHP|CONSEQ1, ADC12CTL1
+        bis.b   #SREF0|INCH0, ADC12MCTL0
+        bis.w   #ADC12ON|ENC|ADC12SC, ADC12CTL0
+        bis.w   #DAC12IR|DAC12AMP0|DAC12AMP1|DAC12AMP2, DAC12_1CTL
+        bis.w   #DAC12ENC, DAC12_1CTL
+        mov.w   #00h, R8
+        mov.w   #00h, R9
+//main:	push	SR			; SR -> stos
+	//mov.b	#0FFh,P2OUT		; inicjalizacja P1OUT
+loop:   jmp loop
+ZEGAR:
+        bic.w   #01h, TACTL
+        cmp.w   #03E8h, R8
+        jz      TESTR9
+        jnz     ZAPIS
+        RETI
+ZAPIS:
+        mov.w   ADC12MEM0, 200h(R8)
+        add.w   #02h, R8
+        RETI
+TESTR9:
+        cmp.w   #03E8h, R9
+        jz      RESETR9
+        jnz     WYSWIETLANIE
+        RETI
+RESETR9:
+        mov.w   #00h, R9
+        RETI
+WYSWIETLANIE:
+        mov.w   200h(R9), DAC12_1DAT
+        add.w   #02h, R9
+        RETI
+PORT_P: 
+        bic.b   #08h, P1IFG
+        bit.b   #01h, P4IN
+        jz      reset
+        RETI
+reset:
+        mov.b   #00h, R8
+        RETI
+;------------------------------------------------------------------------------
+;       Wektory przerwan
+;------------------------------------------------------------------------------
+	ORG	0FFFEh			; wektor resetu
+	DW	INIT			; adres poczatkowy pamieci programu
+        ORG     0FFE8h
+        DW      PORT_P
+        ORG     0FFEAh
+        DW      ZEGAR
+	END
