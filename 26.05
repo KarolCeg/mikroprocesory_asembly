@@ -38,7 +38,6 @@ main:   NOP                             ; main program
         bis.b	#08h,P1IE
         bis.b	#08h,P1IES
         
-          mov.w #0FFFh, R6
         mov.w   #00h, R8        ;ADC
         mov.w   #00h, R9        ;R8*160
        
