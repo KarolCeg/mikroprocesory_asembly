@@ -19,7 +19,7 @@ DDRAMSet EQU 10000000b
         ORG     0FFFEh
         DC16    init                    ; set reset vector to 'init' label             
         ORG     0FFEAh                  ;timer
-        DW      ZEGAR
+        DW      Timer
         ORG     0FFE8h                   ;przycisk
         DW      PORT_P
         
@@ -27,16 +27,16 @@ DDRAMSet EQU 10000000b
         RSEG    CODE                    ; place program in 'CODE' segment
 
 init:   MOV     #SFE(CSTACK), SP        ; set up stack
-        mov.w   #TASSEL1|ID1|ID0|MC0|MC1, TACTL ;timer
-        mov.w   #0C8h, TACCR0
+        mov.w   #TASSEL1|ID1|ID0|MC0|MC1|TAIE, TACTL ;timer
+        mov.w   #0C8h, TACCR0 ; #064h, TACCR0 prawdopodobnie trzeba zmienic
 main:   NOP                             ; main program
         MOV.W   #WDTPW+WDTHOLD,&WDTCTL  ; Stop watchdog timer
         BIS.B   #0FFh, P2DIR
-        BIS.B   #0FFh, P2OUT
+        BIS.B   #00h, P2OUT
         ;-------------------------
    
-        bis.b       #01h,&P1IE
-        bis.b       #01h,&P1IES
+        bis.b	#08h,P1IE
+        bis.b	#08h,P1IES
         
           mov.w #0FFFh, R6
         mov.w   #00h, R8        ;ADC
@@ -60,36 +60,38 @@ main:   NOP                             ; main program
       
 loop: 
         jmp loop
-ZEGAR:
+PORT_P: 
+        bic.b   #08h, P1IFG ;przycisk
+        bit.b   #01h, P4IN
+        jz      Reset
+        RETI
+Reset:
+        mov.b   #00h, R8 ;resetowanie próbek
+        RETI
+Timer:
         bic.w   #01h, TACTL
-        cmp.w   #03E8h, R8
-        jz      TESTR9
-        jnz     ZAPIS
+        cmp.w   #03E8h, R8 ;1000
+        jz      SPRR9 ;jesli 1000
+        jnz     Zapisz
         RETI
-ZAPIS:
+Zapisz:
         mov.w   ADC12MEM0, 200h(R8)
-        add.w   #02h, R8
+        add.w   #02h, R8 ; co dwa bo mikrokontroler wymaga
         RETI
-TESTR9:
+SPRR9:
         cmp.w   #03E8h, R9
-        jz      RESETR9
-        jnz     WYSWIETLANIE
+        jz      ResetR9
+        jnz     Pokaz
         RETI
-RESETR9:
-        mov.w   #00h, R9
-        RETI
-WYSWIETLANIE:
+Pokaz:
         mov.w   200h(R9), DAC12_1DAT
         add.w   #02h, R9
         RETI
-PORT_P: 
-        bic.b   #08h, P1IFG
-        bit.b   #01h, P4IN
-        jz      reset
+ResetR9:
+        mov.w   #00h, R9
         RETI
-reset:
-        mov.b   #00h, R8
-        RETI
+
+
         
         
         END
