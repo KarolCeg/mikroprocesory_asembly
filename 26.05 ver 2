@@ -1,0 +1,85 @@
+#include "msp430.h"                     ; #define controlled include file
+
+E       EQU BIT1
+RS      EQU BIT0
+DB4     EQU BIT2
+DB5     EQU BIT3
+DB6     EQU BIT4
+DB7     EQU BIT5
+DATA4   EQU 00111100b
+FuncSet EQU 00001000b
+DDRAMSet EQU 10000000b
+
+
+        NAME    main                    ; module name
+
+        PUBLIC  main                    ; make the main label vissible
+                                        ; outside this module
+
+        ORG     0FFFEh
+        DC16    init                    ; set reset vector to 'init' label             
+        ORG     0FFEAh                  ;timer
+        DW      Timer
+        ORG     0FFE8h                   ;przycisk
+        DW      PORT_P
+        
+        RSEG    CSTACK                  ; pre-declaration of segment
+        RSEG    CODE                    ; place program in 'CODE' segment
+
+INIT:	mov.w	#0A00h,SP		; inicjalizacja wsk. stosu
+	mov.w	#WDTPW+WDTHOLD,&WDTCTL	; wylaczenie watchdoga
+	bis.b	#0FFh,&P2DIR		; P2.0-P2.7 jako wyjscie
+        bis.b	#08h,P1IE
+        bis.b	#08h,P1IES
+        bis.w   #GIE, SR
+        mov.w   #TASSEL1|ID1|ID0|MC0|MC1|TAIE, TACTL
+        mov.w   #064h, TACCR0
+        mov.b   #00h, P2OUT
+        bis.b   #02h, P6SEL
+        bis.w   #MSC|REF2_5V|REFON, ADC12CTL0
+        bis.w   #SHP|CONSEQ1, ADC12CTL1
+        bis.b   #SREF0|INCH0, ADC12MCTL0
+        bis.w   #ADC12ON|ENC|ADC12SC, ADC12CTL0
+        bis.w   #DAC12IR|DAC12AMP0|DAC12AMP1|DAC12AMP2, DAC12_1CTL
+        bis.w   #DAC12ENC, DAC12_1CTL
+        mov.w   #00h, R8
+        mov.w   #00h, R9
+        
+      
+loop: 
+        jmp loop
+PORT_P: 
+        bic.b   #08h, P1IFG ;przycisk
+        bit.b   #01h, P4IN
+        jz      Reset
+        RETI
+Reset:
+        mov.b   #00h, R8 ;resetowanie próbek
+        RETI
+Timer:
+        bic.w   #01h, TACTL
+        cmp.w   #03E8h, R8 ;1000
+        jz      SPRR9 ;jesli 1000
+        jnz     Zapisz
+        RETI
+Zapisz:
+        mov.w   ADC12MEM0, 200h(R8)
+        add.w   #02h, R8 ; co dwa bo mikrokontroler wymaga
+        RETI
+SPRR9:
+        cmp.w   #03E8h, R9
+        jz      ResetR9
+        jnz     Pokaz
+        RETI
+Pokaz:
+        mov.w   200h(R9), DAC12_1DAT
+        add.w   #02h, R9
+        RETI
+ResetR9:
+        mov.w   #00h, R9
+        RETI
+
+
+        
+        
+        END
