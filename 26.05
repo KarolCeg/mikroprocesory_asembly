@@ -1,35 +1,13 @@
-#include "msp430.h"                     ; #define controlled include file
+#include "msp430.h"                     
 
-E       EQU BIT1
-RS      EQU BIT0
-DB4     EQU BIT2
-DB5     EQU BIT3
-DB6     EQU BIT4
-DB7     EQU BIT5
-DATA4   EQU 00111100b
-FuncSet EQU 00001000b
-DDRAMSet EQU 10000000b
+	ORG	01100h			; poczatkowy adres pamieci programu
 
-
-        NAME    main                    ; module name
-
-        PUBLIC  main                    ; make the main label vissible
-                                        ; outside this module
-
-        ORG     0FFFEh
-        DC16    init                    ; set reset vector to 'init' label             
-        ORG     0FFEAh                  ;timer
-        DW      Timer
-        ORG     0FFE8h                   ;przycisk
-        DW      PORT_P
-        
-        RSEG    CSTACK                  ; pre-declaration of segment
-        RSEG    CODE                    ; place program in 'CODE' segment
-
-init:   MOV     #SFE(CSTACK), SP        ; set up stack
+init:   mov.w	#0A00h,SP		; inicjalizacja wsk. stosu
+	MOV.W   #WDTPW+WDTHOLD,&WDTCTL  ; Stop watchdog timer
+	bis.w   #GIE, SR
         mov.w   #TASSEL1|ID1|ID0|MC0|MC1|TAIE, TACTL ;timer
         mov.w   #0C8h, TACCR0 ; #064h, TACCR0 prawdopodobnie trzeba zmienic
-main:   NOP                             ; main program
+                           
         MOV.W   #WDTPW+WDTHOLD,&WDTCTL  ; Stop watchdog timer
         BIS.B   #0FFh, &P2DIR
         BIS.B   #00h, P2OUT
@@ -86,7 +64,14 @@ ResetR9:
         mov.w   #00h, R9
         RETI
 
-
-        
+;------------------------------------------------------------------------------
+;       Wektory przerwan
+;------------------------------------------------------------------------------
+	ORG	0FFFEh			; wektor resetu
+	DW	INIT			; adres poczatkowy pamieci programu
+        ORG     0FFEAh                  ;timer
+        DW      Timer
+        ORG     0FFE8h                   ;przycisk
+        DW      PORT_P
         
         END
