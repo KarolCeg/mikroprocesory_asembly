@@ -41,11 +41,7 @@ main:   NOP                             ; main program
           mov.w #0FFFh, R6
         mov.w   #00h, R8        ;ADC
         mov.w   #00h, R9        ;R8*160
-        mov.w ADC12MEM0, R10
-        
-        
-        
-        
+       
         bis.b   #02h, &P6SEL
         
         
