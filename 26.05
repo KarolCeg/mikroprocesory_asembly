@@ -31,7 +31,7 @@ init:   MOV     #SFE(CSTACK), SP        ; set up stack
         mov.w   #0C8h, TACCR0 ; #064h, TACCR0 prawdopodobnie trzeba zmienic
 main:   NOP                             ; main program
         MOV.W   #WDTPW+WDTHOLD,&WDTCTL  ; Stop watchdog timer
-        BIS.B   #0FFh, P2DIR
+        BIS.B   #0FFh, &P2DIR
         BIS.B   #00h, P2OUT
         ;-------------------------
    
